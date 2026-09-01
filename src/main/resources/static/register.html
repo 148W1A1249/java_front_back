@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register — NovaMart</title>
+  <link rel="stylesheet" href="/css/shop.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <main class="container">
+    <h1 style="font-family:var(--font-display)">Create account</h1>
+    <form id="form" class="form panel mt-2">
+      <label>Username<input name="username" required minlength="3" /></label>
+      <label>Email<input name="email" type="email" required /></label>
+      <label>Password<input name="password" type="password" required minlength="6" /></label>
+      <button class="btn" type="submit">Register</button>
+      <p class="muted">Already have an account? <a href="/login.html" style="color:var(--moss)">Login</a></p>
+    </form>
+  </main>
+  <script src="/js/api.js"></script>
+  <script>
+    document.getElementById('nav').innerHTML = renderNav();
+    wireLogout();
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        const data = await api('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({
+            username: fd.get('username'),
+            email: fd.get('email'),
+            password: fd.get('password')
+          })
+        });
+        saveAuth(data);
+        location.href = '/';
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Product — NovaMart</title>
+  <link rel="stylesheet" href="/css/shop.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <main class="container">
+    <div id="detail" class="detail"></div>
+  </main>
+  <script src="/js/api.js"></script>
+  <script>
+    document.getElementById('nav').innerHTML = renderNav('shop');
+    wireLogout();
+
+    const id = new URLSearchParams(location.search).get('id');
+
+    async function load() {
+      const root = document.getElementById('detail');
+      if (!id) {
+        root.innerHTML = '<p class="muted">Missing product id.</p>';
+        return;
+      }
+      try {
+        const p = await api(`/products/${id}`);
+        root.innerHTML = `
+          <div class="detail-media">
+            <img src="${p.imageUrl || 'https://placehold.co/800x800/e8dfd0/14201b?text=NovaMart'}" alt="${p.name}" />
+          </div>
+          <div>
+            <h1>${p.name}</h1>
+            <div class="price" style="font-size:1.35rem">${formatMoney(p.price)}</div>
+            <p class="muted mt-2">${p.description || ''}</p>
+            <p class="mt-1">${p.stock > 0 ? p.stock + ' available' : 'Out of stock'}</p>
+            <div class="row mt-3">
+              <label>Qty <input id="qty" type="number" min="1" max="${p.stock}" value="1" style="width:80px" /></label>
+              <button class="btn" id="add-btn" ${p.stock < 1 ? 'disabled' : ''}>Add to cart</button>
+            </div>
+          </div>`;
+
+        document.getElementById('add-btn')?.addEventListener('click', async () => {
+          if (!currentUser()) {
+            location.href = '/login.html?next=' + encodeURIComponent(location.href);
+            return;
+          }
+          const quantity = Number(document.getElementById('qty').value || 1);
+          try {
+            await api('/cart/items', {
+              method: 'POST',
+              body: JSON.stringify({ productId: p.id, quantity })
+            });
+            showToast('Added to cart');
+            refreshCartBadge();
+          } catch (err) {
+            showToast(err.message);
+          }
+        });
+      } catch (err) {
+        root.innerHTML = `<p class="muted">${err.message}</p>`;
+      }
+    }
+
+    load();
+    refreshCartBadge();
+  </script>
+</body>
+</html>

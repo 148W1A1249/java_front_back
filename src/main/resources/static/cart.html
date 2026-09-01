@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cart — NovaMart</title>
+  <link rel="stylesheet" href="/css/shop.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <main class="container">
+    <h1 style="font-family:var(--font-display)">Your cart</h1>
+    <div id="cart" class="panel mt-2"></div>
+    <div id="checkout" class="panel mt-2" hidden>
+      <h2 style="font-family:var(--font-display);margin-top:0">Checkout</h2>
+      <form id="checkout-form" class="form">
+        <label>Full name<input name="shippingName" required maxlength="150" /></label>
+        <label>Shipping address<textarea name="shippingAddress" rows="3" required maxlength="500"></textarea></label>
+        <button class="btn" type="submit">Place order</button>
+      </form>
+      <p class="muted mt-1">Demo checkout — no real payment.</p>
+    </div>
+  </main>
+  <script src="/js/api.js"></script>
+  <script>
+    document.getElementById('nav').innerHTML = renderNav('cart');
+    wireLogout();
+
+    if (!currentUser()) {
+      location.href = '/login.html?next=/cart.html';
+    }
+
+    async function loadCart() {
+      const root = document.getElementById('cart');
+      const checkout = document.getElementById('checkout');
+      try {
+        const cart = await api('/cart');
+        if (!cart.items.length) {
+          root.innerHTML = '<p class="muted">Your cart is empty. <a href="/" style="color:var(--moss)">Continue shopping</a></p>';
+          checkout.hidden = true;
+          return;
+        }
+        checkout.hidden = false;
+        root.innerHTML = cart.items.map(item => `
+          <div class="cart-row" data-id="${item.id}">
+            <img src="${item.imageUrl || 'https://placehold.co/144x144/e8dfd0/14201b?text=NM'}" alt="" />
+            <div>
+              <strong>${item.productName}</strong>
+              <div class="muted">${formatMoney(item.unitPrice)} each</div>
+              <div class="qty mt-1">
+                <input type="number" min="1" max="${item.stockAvailable}" value="${item.quantity}" data-qty="${item.id}" />
+                <button class="btn btn-ghost" data-update="${item.id}">Update</button>
+              </div>
+            </div>
+            <div class="actions">
+              <div class="price">${formatMoney(item.lineTotal)}</div>
+              <button class="btn btn-ghost mt-1" data-remove="${item.id}">Remove</button>
+            </div>
+          </div>
+        `).join('') + `<div class="row mt-2" style="justify-content:space-between">
+            <strong>Total</strong>
+            <strong class="price">${formatMoney(cart.totalAmount)}</strong>
+          </div>`;
+
+        root.querySelectorAll('[data-update]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-update');
+            const qty = Number(root.querySelector(`[data-qty="${id}"]`).value);
+            try {
+              await api(`/cart/items/${id}`, { method: 'PUT', body: JSON.stringify({ quantity: qty }) });
+              showToast('Cart updated');
+              loadCart();
+              refreshCartBadge();
+            } catch (e) { showToast(e.message); }
+          });
+        });
+
+        root.querySelectorAll('[data-remove]').forEach(btn => {
+          btn.addEventListener('click', async () => {
+            try {
+              await api(`/cart/items/${btn.getAttribute('data-remove')}`, { method: 'DELETE' });
+              showToast('Removed');
+              loadCart();
+              refreshCartBadge();
+            } catch (e) { showToast(e.message); }
+          });
+        });
+      } catch (err) {
+        root.innerHTML = `<p class="muted">${err.message}</p>`;
+      }
+    }
+
+    document.getElementById('checkout-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      try {
+        const order = await api('/orders/checkout', {
+          method: 'POST',
+          body: JSON.stringify({
+            shippingName: fd.get('shippingName'),
+            shippingAddress: fd.get('shippingAddress')
+          })
+        });
+        showToast('Order placed #' + order.id);
+        location.href = '/orders.html';
+      } catch (err) {
+        showToast(err.message);
+      }
+    });
+
+    loadCart();
+    refreshCartBadge();
+  </script>
+</body>
+</html>
