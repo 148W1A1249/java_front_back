@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Orders — NovaMart</title>
+  <link rel="stylesheet" href="/css/shop.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <main class="container">
+    <h1 style="font-family:var(--font-display)">Your orders</h1>
+    <div id="orders" class="stack mt-2"></div>
+  </main>
+  <script src="/js/api.js"></script>
+  <script>
+    document.getElementById('nav').innerHTML = renderNav('orders');
+    wireLogout();
+    if (!currentUser()) location.href = '/login.html?next=/orders.html';
+
+    async function load() {
+      const root = document.getElementById('orders');
+      try {
+        const orders = await api('/orders/mine');
+        if (!orders.length) {
+          root.innerHTML = '<div class="panel"><p class="muted">No orders yet.</p></div>';
+          return;
+        }
+        root.innerHTML = orders.map(o => `
+          <article class="panel order-row" style="display:block">
+            <div class="row" style="justify-content:space-between">
+              <strong>Order #${o.id}</strong>
+              <span class="price">${formatMoney(o.totalAmount)}</span>
+            </div>
+            <div class="muted mt-1">${o.status} · ${new Date(o.createdOn).toLocaleString()}</div>
+            <div class="muted">${o.shippingName} — ${o.shippingAddress}</div>
+            <ul class="mt-1">
+              ${o.items.map(i => `<li>${i.productName} × ${i.quantity} — ${formatMoney(i.lineTotal)}</li>`).join('')}
+            </ul>
+          </article>
+        `).join('');
+      } catch (err) {
+        root.innerHTML = `<p class="muted">${err.message}</p>`;
+      }
+    }
+
+    load();
+    refreshCartBadge();
+  </script>
+</body>
+</html>

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NovaMart — Everyday essentials</title>
+  <link rel="stylesheet" href="/css/shop.css" />
+</head>
+<body>
+  <div id="nav"></div>
+  <main class="container">
+    <section class="hero">
+      <h1>Goods for a quieter home.</h1>
+      <p>Curated everyday pieces — from desk lamps to weekenders — ready to ship.</p>
+    </section>
+    <div id="products" class="grid"></div>
+  </main>
+  <script src="/js/api.js"></script>
+  <script>
+    document.getElementById('nav').innerHTML = renderNav('shop');
+    wireLogout();
+
+    async function loadProducts() {
+      const root = document.getElementById('products');
+      try {
+        const page = await api('/products?page=0&size=24&sortBy=id&direction=desc');
+        if (!page.content.length) {
+          root.innerHTML = '<p class="muted">No products yet.</p>';
+          return;
+        }
+        root.innerHTML = page.content.map((p, i) => `
+          <a class="card" href="/product.html?id=${p.id}" style="animation-delay:${i * 0.04}s">
+            <div class="card-media">
+              <img src="${p.imageUrl || 'https://placehold.co/600x450/e8dfd0/14201b?text=NovaMart'}" alt="${p.name}" />
+            </div>
+            <div class="card-body">
+              <h3>${p.name}</h3>
+              <div class="price">${formatMoney(p.price)}</div>
+              <div class="muted mt-1">${p.stock} in stock</div>
+            </div>
+          </a>
+        `).join('');
+      } catch (err) {
+        root.innerHTML = `<p class="muted">${err.message}</p>`;
+      }
+    }
+
+    loadProducts();
+    refreshCartBadge();
+  </script>
+</body>
+</html>

@@ -1,0 +1,2 @@
+-- NovaMart reference schema (Hibernate ddl-auto=update manages runtime)
+-- product, carts, cart_items, orders, order_items, users, refresh_token
